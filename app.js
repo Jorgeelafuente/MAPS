@@ -1,12 +1,10 @@
 let map = L.map('map').setView([39.5, -0.4], 8);
 
-// Capa mapa (gratuita)
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {}).addTo(map);
 
 let markers = [];
 
-// Convertir coordenadas tipo Google Maps a decimal
+// Convertir coordenadas Google Maps → decimal
 function convertCoords(coord) {
     let regex = /(\d+)°(\d+)'([\d.]+)"([NS])\s+(\d+)°(\d+)'([\d.]+)"([EW])/;
     let match = coord.match(regex);
@@ -22,25 +20,38 @@ function convertCoords(coord) {
     return [lat, lng];
 }
 
-// Leer CSV
+// Leer CSV (detecta ; o , automáticamente)
 document.getElementById("fileInput").addEventListener("change", function(e) {
+
     let file = e.target.files[0];
     let reader = new FileReader();
 
     reader.onload = function(e) {
+
         let text = e.target.result;
+
+        // Detectar separador automáticamente
+        let separator = text.includes(";") ? ";" : ",";
+
         let rows = text.split("\n").slice(1);
 
         rows.forEach(row => {
-            let cols = row.split(",");
 
-            let cliente = cols[0];
-            let coordsRaw = cols[3];
+            if (!row.trim()) return;
+
+            let cols = row.split(separator);
+
+            let cliente = cols[0]?.trim();
+            let coordsRaw = cols[3]?.trim();
 
             if (!coordsRaw) return;
 
             let coords = convertCoords(coordsRaw);
-            if (!coords) return;
+
+            if (!coords) {
+                console.log("Error coordenadas:", coordsRaw);
+                return;
+            }
 
             createMarker(cliente, coords);
         });
