@@ -6,17 +6,19 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 let markers = [];
 
-// Convertir coordenadas
+// Convertir coordenadas Google Maps
 function convertCoords(coord) {
+
+    coord = String(coord).trim();
 
     console.log("Coordenada original:", coord);
 
-    let regex = /(\d+)°(\d+)'([\d.]+)"([NS])\s+(\d+)°(\d+)'([\d.]+)"([EW])/;
+    let regex = /(\d+)°(\d+)'([\d.]+)"([NS])\s*(\d+)°(\d+)'([\d.]+)"([EW])/;
 
     let match = coord.match(regex);
 
     if (!match) {
-        console.log("ERROR convirtiendo coordenada");
+        console.log("ERROR coordenadas:", coord);
         return null;
     }
 
@@ -36,6 +38,36 @@ function convertCoords(coord) {
     return [lat, lng];
 }
 
+// Buscar columna automáticamente
+function findColumn(row, possibleNames) {
+
+    let keys = Object.keys(row);
+
+    for (let key of keys) {
+
+        let cleanKey =
+            key.toLowerCase()
+               .trim()
+               .normalize("NFD")
+               .replace(/[\u0300-\u036f]/g, "");
+
+        for (let name of possibleNames) {
+
+            let cleanName =
+                name.toLowerCase()
+                    .trim()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "");
+
+            if (cleanKey.includes(cleanName)) {
+                return key;
+            }
+        }
+    }
+
+    return null;
+}
+
 // Cargar Excel
 document.getElementById('fileInput').addEventListener('change', function(e) {
 
@@ -51,11 +83,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
         let workbook = XLSX.read(data, { type: 'array' });
 
-        console.log("Workbook:", workbook);
-
         let sheetName = workbook.SheetNames[0];
-
-        console.log("Hoja detectada:", sheetName);
 
         let sheet = workbook.Sheets[sheetName];
 
@@ -63,31 +91,46 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
         console.log("Datos Excel:", jsonData);
 
+        if (jsonData.length === 0) {
+            alert("El Excel está vacío");
+            return;
+        }
+
+        // Detectar columnas reales
+        let clienteCol = findColumn(jsonData[0], [
+            "cliente"
+        ]);
+
+        let coordsCol = findColumn(jsonData[0], [
+            "coordenadas",
+            "coord"
+        ]);
+
+        console.log("Columna cliente:", clienteCol);
+        console.log("Columna coordenadas:", coordsCol);
+
+        if (!clienteCol || !coordsCol) {
+            alert("No se encontraron columnas válidas");
+            return;
+        }
+
+        // Limpiar marcadores
         markers.forEach(m => map.removeLayer(m));
         markers = [];
 
         jsonData.forEach(row => {
 
-            console.log("Fila:", row);
-
-            let cliente = row["Cliente"];
-
-            let coordsRaw = row["Coordenadas"];
+            let cliente = row[clienteCol];
+            let coordsRaw = row[coordsCol];
 
             console.log("Cliente:", cliente);
             console.log("Coords:", coordsRaw);
 
-            if (!cliente || !coordsRaw) {
-                console.log("Faltan datos");
-                return;
-            }
+            if (!cliente || !coordsRaw) return;
 
             let coords = convertCoords(coordsRaw);
 
-            if (!coords) {
-                console.log("No se pudieron convertir");
-                return;
-            }
+            if (!coords) return;
 
             createMarker(cliente, coords);
         });
@@ -98,8 +141,6 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
 // Crear marcador
 function createMarker(cliente, coords) {
-
-    console.log("Creando marcador:", cliente, coords);
 
     let savedData = JSON.parse(localStorage.getItem(cliente)) || {
         congelado: 0,
@@ -170,7 +211,7 @@ function saveData(cliente) {
     location.reload();
 }
 
-// Color marcador
+// Colores
 function getColor(data) {
 
     if (data.congelado > 0 && data.refrigerado > 0) {
