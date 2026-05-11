@@ -38,36 +38,6 @@ function convertCoords(coord) {
     return [lat, lng];
 }
 
-// Buscar columna automáticamente
-function findColumn(row, possibleNames) {
-
-    let keys = Object.keys(row);
-
-    for (let key of keys) {
-
-        let cleanKey =
-            key.toLowerCase()
-               .trim()
-               .normalize("NFD")
-               .replace(/[\u0300-\u036f]/g, "");
-
-        for (let name of possibleNames) {
-
-            let cleanName =
-                name.toLowerCase()
-                    .trim()
-                    .normalize("NFD")
-                    .replace(/[\u0300-\u036f]/g, "");
-
-            if (cleanKey.includes(cleanName)) {
-                return key;
-            }
-        }
-    }
-
-    return null;
-}
-
 // Cargar Excel
 document.getElementById('fileInput').addEventListener('change', function(e) {
 
@@ -87,53 +57,41 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
         let sheet = workbook.Sheets[sheetName];
 
-        let jsonData = XLSX.utils.sheet_to_json(sheet);
+        // Leer como array puro
+        let rows = XLSX.utils.sheet_to_json(sheet, {
+            header: 1
+        });
 
-        console.log("Datos Excel:", jsonData);
+        console.log("ROWS:", rows);
 
-        if (jsonData.length === 0) {
-            alert("El Excel está vacío");
-            return;
-        }
-
-        // Detectar columnas reales
-        let clienteCol = findColumn(jsonData[0], [
-            "cliente"
-        ]);
-
-        let coordsCol = findColumn(jsonData[0], [
-            "coordenadas",
-            "coord"
-        ]);
-
-        console.log("Columna cliente:", clienteCol);
-        console.log("Columna coordenadas:", coordsCol);
-
-        if (!clienteCol || !coordsCol) {
-            alert("No se encontraron columnas válidas");
-            return;
-        }
-
-        // Limpiar marcadores
+        // Limpiar mapa
         markers.forEach(m => map.removeLayer(m));
         markers = [];
 
-        jsonData.forEach(row => {
+        // Empezar desde fila 2
+        for (let i = 1; i < rows.length; i++) {
 
-            let cliente = row[clienteCol];
-            let coordsRaw = row[coordsCol];
+            let row = rows[i];
+
+            if (!row) continue;
+
+            // A = Cliente
+            let cliente = row[0];
+
+            // D = Coordenadas
+            let coordsRaw = row[3];
 
             console.log("Cliente:", cliente);
             console.log("Coords:", coordsRaw);
 
-            if (!cliente || !coordsRaw) return;
+            if (!cliente || !coordsRaw) continue;
 
             let coords = convertCoords(coordsRaw);
 
-            if (!coords) return;
+            if (!coords) continue;
 
             createMarker(cliente, coords);
-        });
+        }
     };
 
     reader.readAsArrayBuffer(file);
@@ -211,7 +169,7 @@ function saveData(cliente) {
     location.reload();
 }
 
-// Colores
+// Color marcador
 function getColor(data) {
 
     if (data.congelado > 0 && data.refrigerado > 0) {
