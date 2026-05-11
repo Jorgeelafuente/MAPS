@@ -1,28 +1,28 @@
 // INICIAR MAPA
 let map = L.map('map').setView([39.5, -0.4], 8);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: 'OpenStreetMap'
-}).addTo(map);
+L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+        attribution: 'OpenStreetMap'
+    }
+).addTo(map);
 
 // ARRAY MARCADORES
 let markers = [];
 
-// CONVERTIR COORDENADAS GOOGLE MAPS
+// CONVERTIR COORDENADAS
 function convertCoords(coord) {
 
     coord = String(coord).trim();
 
-    console.log("Coordenada original:", coord);
-
-    let regex = /(\d+)°(\d+)'([\d.]+)"([NS])\s*(\d+)°(\d+)'([\d.]+)"([EW])/;
+    let regex =
+        /(\d+)°(\d+)'([\d.]+)"([NS])\s*(\d+)°(\d+)'([\d.]+)"([EW])/;
 
     let match = coord.match(regex);
 
     if (!match) {
-
         console.log("ERROR coordenadas:", coord);
-
         return null;
     }
 
@@ -43,13 +43,12 @@ function convertCoords(coord) {
 }
 
 // CARGAR EXCEL
-document.getElementById('fileInput').addEventListener('change', function(e) {
+document.getElementById('fileInput')
+.addEventListener('change', function(e) {
 
     let file = e.target.files[0];
 
     if (!file) return;
-
-    console.log("Archivo cargado:", file.name);
 
     let reader = new FileReader();
 
@@ -65,12 +64,9 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
         let sheet = workbook.Sheets[sheetName];
 
-        // LEER COMO ARRAY
         let rows = XLSX.utils.sheet_to_json(sheet, {
             header: 1
         });
-
-        console.log("ROWS:", rows);
 
         // LIMPIAR MAPA
         markers.forEach(marker => {
@@ -86,14 +82,15 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
             if (!row) continue;
 
-            // COLUMNA A = CLIENTE
+            // COLUMNAS
             let cliente = row[0];
-
-            // COLUMNA D = COORDENADAS
+            let municipio = row[1];
+            let localidad = row[2];
             let coordsRaw = row[3];
 
-            console.log("Cliente:", cliente);
-            console.log("Coords:", coordsRaw);
+            // NUEVAS COLUMNAS
+            let congelado = parseInt(row[8]) || 0;
+            let refrigerado = parseInt(row[9]) || 0;
 
             if (!cliente || !coordsRaw) continue;
 
@@ -101,7 +98,14 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
             if (!coords) continue;
 
-            createMarker(cliente, coords);
+            createMarker(
+                cliente,
+                municipio,
+                localidad,
+                coords,
+                congelado,
+                refrigerado
+            );
         }
 
         updateSidebar();
@@ -111,14 +115,19 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 });
 
 // CREAR MARCADOR
-function createMarker(cliente, coords) {
+function createMarker(
+    cliente,
+    municipio,
+    localidad,
+    coords,
+    congelado,
+    refrigerado
+) {
 
-    let savedData = JSON.parse(localStorage.getItem(cliente)) || {
-        congelado: 0,
-        refrigerado: 0
-    };
-
-    let color = getColor(savedData);
+    let color = getColor(
+        congelado,
+        refrigerado
+    );
 
     let icon = L.divIcon({
         className: 'custom-marker',
@@ -137,102 +146,69 @@ function createMarker(cliente, coords) {
         icon
     }).addTo(map);
 
-    marker.on('click', function() {
-
-        let popup = `
-            <b>${cliente}</b>
-
-            <br><br>
-
-            Congelado:
-
-            <br>
-
-            <input
-                type="number"
-                id="c${cliente}"
-                value="${savedData.congelado}"
-            >
-
-            <br><br>
-
-            Refrigerado:
-
-            <br>
-
-            <input
-                type="number"
-                id="r${cliente}"
-                value="${savedData.refrigerado}"
-            >
-
-            <br><br>
-
-            <button onclick="saveData('${cliente}')">
-                Guardar
-            </button>
-        `;
-
-        marker.bindPopup(popup).openPopup();
-    });
-
     marker.cliente = cliente;
+
+    marker.congelado = congelado;
+
+    marker.refrigerado = refrigerado;
+
+    marker.bindPopup(`
+        <div style="min-width:220px">
+
+            <h3 style="
+                color:#1464c4;
+                margin-bottom:10px;
+            ">
+                ${cliente}
+            </h3>
+
+            <b>Municipio:</b>
+            ${municipio}
+            <br><br>
+
+            <b>Localidad:</b>
+            ${localidad}
+            <br><br>
+
+            <b>Congelado:</b>
+            ${congelado} pallets
+            <br><br>
+
+            <b>Refrigerado:</b>
+            ${refrigerado} pallets
+
+        </div>
+    `);
 
     markers.push(marker);
 }
 
-// GUARDAR PALLETS
-function saveData(cliente) {
+// COLORES
+function getColor(congelado, refrigerado) {
 
-    let congelado =
-        parseInt(
-            document.getElementById("c" + cliente).value
-        ) || 0;
-
-    let refrigerado =
-        parseInt(
-            document.getElementById("r" + cliente).value
-        ) || 0;
-
-    let data = {
-        congelado,
-        refrigerado
-    };
-
-    localStorage.setItem(
-        cliente,
-        JSON.stringify(data)
-    );
-
-    location.reload();
-}
-
-// COLOR MARCADOR
-function getColor(data) {
-
-    // MORADO = AMBOS
+    // MORADO
     if (
-        data.congelado > 0 &&
-        data.refrigerado > 0
+        congelado > 0 &&
+        refrigerado > 0
     ) {
-        return "purple";
+        return "#7b1fa2";
     }
 
-    // ROJO = CONGELADO
-    if (data.congelado > 0) {
-        return "red";
+    // ROJO
+    if (congelado > 0) {
+        return "#e53935";
     }
 
-    // AZUL = REFRIGERADO
-    if (data.refrigerado > 0) {
-        return "blue";
+    // AZUL
+    if (refrigerado > 0) {
+        return "#1e88e5";
     }
 
-    // GRIS = SIN DATOS
-    return "gray";
+    // GRIS
+    return "#9e9e9e";
 }
 
-// ACTUALIZAR PANEL LATERAL
+// ACTUALIZAR SIDEBAR
 function updateSidebar() {
 
     document.getElementById("totalClientes").innerText =
@@ -244,17 +220,9 @@ function updateSidebar() {
 
     markers.forEach(marker => {
 
-        let cliente = marker.cliente;
+        totalCongelado += marker.congelado;
 
-        let data =
-            JSON.parse(localStorage.getItem(cliente)) || {
-                congelado: 0,
-                refrigerado: 0
-            };
-
-        totalCongelado += data.congelado;
-
-        totalRefrigerado += data.refrigerado;
+        totalRefrigerado += marker.refrigerado;
     });
 
     document.getElementById("totalCongelado").innerText =
