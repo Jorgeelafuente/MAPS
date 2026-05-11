@@ -1,12 +1,14 @@
+// INICIAR MAPA
 let map = L.map('map').setView([39.5, -0.4], 8);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: 'OpenStreetMap'
 }).addTo(map);
 
+// ARRAY MARCADORES
 let markers = [];
 
-// Convertir coordenadas Google Maps
+// CONVERTIR COORDENADAS GOOGLE MAPS
 function convertCoords(coord) {
 
     coord = String(coord).trim();
@@ -18,7 +20,9 @@ function convertCoords(coord) {
     let match = coord.match(regex);
 
     if (!match) {
+
         console.log("ERROR coordenadas:", coord);
+
         return null;
     }
 
@@ -38,10 +42,12 @@ function convertCoords(coord) {
     return [lat, lng];
 }
 
-// Cargar Excel
+// CARGAR EXCEL
 document.getElementById('fileInput').addEventListener('change', function(e) {
 
     let file = e.target.files[0];
+
+    if (!file) return;
 
     console.log("Archivo cargado:", file.name);
 
@@ -51,34 +57,39 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
         let data = new Uint8Array(event.target.result);
 
-        let workbook = XLSX.read(data, { type: 'array' });
+        let workbook = XLSX.read(data, {
+            type: 'array'
+        });
 
         let sheetName = workbook.SheetNames[0];
 
         let sheet = workbook.Sheets[sheetName];
 
-        // Leer como array puro
+        // LEER COMO ARRAY
         let rows = XLSX.utils.sheet_to_json(sheet, {
             header: 1
         });
 
         console.log("ROWS:", rows);
 
-        // Limpiar mapa
-        markers.forEach(m => map.removeLayer(m));
+        // LIMPIAR MAPA
+        markers.forEach(marker => {
+            map.removeLayer(marker);
+        });
+
         markers = [];
 
-        // Empezar desde fila 2
+        // RECORRER FILAS
         for (let i = 1; i < rows.length; i++) {
 
             let row = rows[i];
 
             if (!row) continue;
 
-            // A = Cliente
+            // COLUMNA A = CLIENTE
             let cliente = row[0];
 
-            // D = Coordenadas
+            // COLUMNA D = COORDENADAS
             let coordsRaw = row[3];
 
             console.log("Cliente:", cliente);
@@ -92,12 +103,14 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
             createMarker(cliente, coords);
         }
+
+        updateSidebar();
     };
 
     reader.readAsArrayBuffer(file);
 });
 
-// Crear marcador
+// CREAR MARCADOR
 function createMarker(cliente, coords) {
 
     let savedData = JSON.parse(localStorage.getItem(cliente)) || {
@@ -120,23 +133,39 @@ function createMarker(cliente, coords) {
         `
     });
 
-    let marker = L.marker(coords, { icon }).addTo(map);
+    let marker = L.marker(coords, {
+        icon
+    }).addTo(map);
 
     marker.on('click', function() {
 
         let popup = `
-            <b>${cliente}</b><br><br>
+            <b>${cliente}</b>
+
+            <br><br>
 
             Congelado:
-            <input type="number"
-                   id="c${cliente}"
-                   value="${savedData.congelado}">
+
+            <br>
+
+            <input
+                type="number"
+                id="c${cliente}"
+                value="${savedData.congelado}"
+            >
+
             <br><br>
 
             Refrigerado:
-            <input type="number"
-                   id="r${cliente}"
-                   value="${savedData.refrigerado}">
+
+            <br>
+
+            <input
+                type="number"
+                id="r${cliente}"
+                value="${savedData.refrigerado}"
+            >
+
             <br><br>
 
             <button onclick="saveData('${cliente}')">
@@ -147,42 +176,90 @@ function createMarker(cliente, coords) {
         marker.bindPopup(popup).openPopup();
     });
 
+    marker.cliente = cliente;
+
     markers.push(marker);
 }
 
-// Guardar pallets
+// GUARDAR PALLETS
 function saveData(cliente) {
 
     let congelado =
-        parseInt(document.getElementById("c" + cliente).value) || 0;
+        parseInt(
+            document.getElementById("c" + cliente).value
+        ) || 0;
 
     let refrigerado =
-        parseInt(document.getElementById("r" + cliente).value) || 0;
+        parseInt(
+            document.getElementById("r" + cliente).value
+        ) || 0;
 
     let data = {
         congelado,
         refrigerado
     };
 
-    localStorage.setItem(cliente, JSON.stringify(data));
+    localStorage.setItem(
+        cliente,
+        JSON.stringify(data)
+    );
 
     location.reload();
 }
 
-// Color marcador
+// COLOR MARCADOR
 function getColor(data) {
 
-    if (data.congelado > 0 && data.refrigerado > 0) {
+    // MORADO = AMBOS
+    if (
+        data.congelado > 0 &&
+        data.refrigerado > 0
+    ) {
         return "purple";
     }
 
+    // ROJO = CONGELADO
     if (data.congelado > 0) {
         return "red";
     }
 
+    // AZUL = REFRIGERADO
     if (data.refrigerado > 0) {
         return "blue";
     }
 
+    // GRIS = SIN DATOS
     return "gray";
+}
+
+// ACTUALIZAR PANEL LATERAL
+function updateSidebar() {
+
+    document.getElementById("totalClientes").innerText =
+        markers.length + " clientes";
+
+    let totalCongelado = 0;
+
+    let totalRefrigerado = 0;
+
+    markers.forEach(marker => {
+
+        let cliente = marker.cliente;
+
+        let data =
+            JSON.parse(localStorage.getItem(cliente)) || {
+                congelado: 0,
+                refrigerado: 0
+            };
+
+        totalCongelado += data.congelado;
+
+        totalRefrigerado += data.refrigerado;
+    });
+
+    document.getElementById("totalCongelado").innerText =
+        totalCongelado + " pallets";
+
+    document.getElementById("totalRefrigerado").innerText =
+        totalRefrigerado + " pallets";
 }
