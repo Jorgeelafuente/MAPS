@@ -22,7 +22,9 @@ function convertCoords(coord) {
     let match = coord.match(regex);
 
     if (!match) {
+
         console.log("ERROR coordenadas:", coord);
+
         return null;
     }
 
@@ -37,6 +39,7 @@ function convertCoords(coord) {
         (+match[7] / 3600);
 
     if (match[4] === "S") lat = -lat;
+
     if (match[8] === "W") lng = -lng;
 
     return [lat, lng];
@@ -89,8 +92,11 @@ document.getElementById('fileInput')
             let coordsRaw = row[3];
 
             // NUEVAS COLUMNAS
-            let congelado = parseInt(row[8]) || 0;
-            let refrigerado = parseInt(row[9]) || 0;
+            let congelado =
+                parseInt(row[5]) || 0;
+
+            let refrigerado =
+                parseInt(row[6]) || 0;
 
             if (!cliente || !coordsRaw) continue;
 
@@ -138,6 +144,7 @@ function createMarker(
                 height:18px;
                 border-radius:50%;
                 border:2px solid white;
+                box-shadow:0 0 8px rgba(0,0,0,0.4);
             "></div>
         `
     });
@@ -164,14 +171,17 @@ function createMarker(
 
             <b>Municipio:</b>
             ${municipio}
+
             <br><br>
 
             <b>Localidad:</b>
             ${localidad}
+
             <br><br>
 
             <b>Congelado:</b>
             ${congelado} pallets
+
             <br><br>
 
             <b>Refrigerado:</b>
@@ -184,7 +194,10 @@ function createMarker(
 }
 
 // COLORES
-function getColor(congelado, refrigerado) {
+function getColor(
+    congelado,
+    refrigerado
+) {
 
     // MORADO
     if (
@@ -208,10 +221,12 @@ function getColor(congelado, refrigerado) {
     return "#9e9e9e";
 }
 
-// ACTUALIZAR SIDEBAR
+// ACTUALIZAR PANEL LATERAL
 function updateSidebar() {
 
-    document.getElementById("totalClientes").innerText =
+    document.getElementById(
+        "totalClientes"
+    ).innerText =
         markers.length + " clientes";
 
     let totalCongelado = 0;
@@ -220,14 +235,20 @@ function updateSidebar() {
 
     markers.forEach(marker => {
 
-        totalCongelado += marker.congelado;
+        totalCongelado +=
+            marker.congelado;
 
-        totalRefrigerado += marker.refrigerado;
+        totalRefrigerado +=
+            marker.refrigerado;
     });
 
-    document.getElementById("totalCongelado").innerText =
+    document.getElementById(
+        "totalCongelado"
+    ).innerText =
         totalCongelado + " pallets";
 
-    document.getElementById("totalRefrigerado").innerText =
+    document.getElementById(
+        "totalRefrigerado"
+    ).innerText =
         totalRefrigerado + " pallets";
 }
