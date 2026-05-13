@@ -5,7 +5,7 @@
 
     <meta charset="UTF-8">
 
-    <title>Mapa Recogidas</title>
+    <title>Control de Recogidas</title>
 
     <link rel="stylesheet" href="style.css">
 
@@ -20,13 +20,25 @@
 
     <h1>Control de Recogidas</h1>
 
-    <div class="upload-box">
-        <input type="file" id="fileInput" accept=".xlsx">
+    <div class="top-buttons">
+
+        <button id="driversBtn">
+            Conductores
+        </button>
+
+        <div class="upload-box">
+            <input type="file"
+                   id="fileInput"
+                   accept=".xlsx">
+        </div>
+
     </div>
 
 </header>
 
 <div class="main-container">
+
+    <!-- SIDEBAR -->
 
     <div class="sidebar">
 
@@ -49,7 +61,59 @@
 
     </div>
 
+    <!-- MAPA -->
+
     <div id="map"></div>
+
+</div>
+
+<!-- MODAL CONDUCTORES -->
+
+<div id="driversModal" class="modal hidden">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h2>Conductores</h2>
+
+            <button id="closeModal">
+                ✖
+            </button>
+
+        </div>
+
+        <!-- SUBIR EXCEL -->
+
+        <div class="drivers-upload">
+
+            <input type="file"
+                   id="driversFile"
+                   accept=".xlsx">
+
+        </div>
+
+        <!-- AÑADIR -->
+
+        <div class="add-driver">
+
+            <input type="text"
+                   id="driverName"
+                   placeholder="Nombre conductor">
+
+            <button id="addDriverBtn">
+                Añadir
+            </button>
+
+        </div>
+
+        <!-- LISTA -->
+
+        <div id="driversList">
+
+        </div>
+
+    </div>
 
 </div>
 
