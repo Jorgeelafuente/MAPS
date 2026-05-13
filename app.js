@@ -5,7 +5,7 @@
 let map = L.map('map').setView([39.5, -0.4], 8);
 
 L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    'https://{s}.tile.openstreetmap.org/{z}/{y}.png',
     {
         attribution: 'OpenStreetMap'
     }
@@ -80,7 +80,9 @@ document
                 header: 1
             });
 
-        alert("Excel conductores cargado");
+        document
+        .getElementById("driversFileName")
+        .innerText = file.name;
     };
 
     reader.readAsArrayBuffer(file);
@@ -103,9 +105,6 @@ document
     if (!name) return;
 
     if (drivers.includes(name)) {
-
-        alert("El conductor ya existe");
-
         return;
     }
 
@@ -142,33 +141,43 @@ function renderDrivers() {
         card.className = "driver-card";
 
         card.innerHTML = `
-            <div class="driver-name">
-                ${driver}
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+            ">
+
+                <div class="driver-name">
+                    ${driver}
+                </div>
+
+                <div class="driver-actions">
+
+                    <button
+                        class="info-btn"
+                        onclick="toggleDriverInfo('${driver}')"
+                    >
+                        i
+                    </button>
+
+                    <button
+                        class="add-btn"
+                    >
+                        +
+                    </button>
+
+                    <button
+                        class="delete-btn"
+                        onclick="deleteDriver('${driver}')"
+                    >
+                        🗑
+                    </button>
+
+                </div>
+
             </div>
 
-            <div class="driver-actions">
-
-                <button
-                    class="info-btn"
-                    onclick="showDriverInfo('${driver}')"
-                >
-                    i
-                </button>
-
-                <button
-                    class="add-btn"
-                >
-                    +
-                </button>
-
-                <button
-                    class="delete-btn"
-                    onclick="deleteDriver('${driver}')"
-                >
-                    🗑
-                </button>
-
-            </div>
+            <div id="info-${driver}"></div>
         `;
 
         container.appendChild(card);
@@ -203,13 +212,25 @@ function deleteDriver(driver) {
 // INFO CONDUCTOR
 // =============================
 
-function showDriverInfo(driver) {
+function toggleDriverInfo(driver) {
+
+    let container =
+        document.getElementById(`info-${driver}`);
+
+    if (container.innerHTML !== "") {
+
+        container.innerHTML = "";
+
+        return;
+    }
 
     if (driversData.length === 0) {
 
-        alert(
-            "Primero sube el Excel conductores"
-        );
+        container.innerHTML = `
+            <div class="driver-info">
+                No se ha cargado el Excel conductores
+            </div>
+        `;
 
         return;
     }
@@ -237,28 +258,54 @@ function showDriverInfo(driver) {
 
     if (!found) {
 
-        alert(
-            "No se encontró información"
-        );
+        container.innerHTML = `
+            <div class="driver-info">
+                No se encontró información
+            </div>
+        `;
 
         return;
     }
 
-    alert(`
-Nombre: ${found[0] || "-"}
+    container.innerHTML = `
+        <div class="driver-info">
 
-Matrícula: ${found[1] || "-"}
+            <div class="driver-info-grid">
 
-Teléfono: ${found[2] || "-"}
+                <div class="driver-info-item">
+                    <span>Matrícula</span>
+                    <p>${found[1] || "-"}</p>
+                </div>
 
-Tipo: ${found[3] || "-"}
+                <div class="driver-info-item">
+                    <span>Teléfono</span>
+                    <p>${found[2] || "-"}</p>
+                </div>
 
-Capacidad: ${found[4] || "-"}
+                <div class="driver-info-item">
+                    <span>Tipo</span>
+                    <p>${found[3] || "-"}</p>
+                </div>
 
-Zona: ${found[5] || "-"}
+                <div class="driver-info-item">
+                    <span>Capacidad</span>
+                    <p>${found[4] || "-"}</p>
+                </div>
 
-Observaciones: ${found[6] || "-"}
-    `);
+                <div class="driver-info-item">
+                    <span>Zona</span>
+                    <p>${found[5] || "-"}</p>
+                </div>
+
+                <div class="driver-info-item">
+                    <span>Observaciones</span>
+                    <p>${found[6] || "-"}</p>
+                </div>
+
+            </div>
+
+        </div>
+    `;
 }
 
 // =============================
