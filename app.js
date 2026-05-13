@@ -58,6 +58,10 @@ document
 
     if (!file) return;
 
+    document
+    .getElementById("driversFileName")
+    .innerText = file.name;
+
     let reader = new FileReader();
 
     reader.onload = function(event) {
@@ -79,10 +83,6 @@ document
             XLSX.utils.sheet_to_json(sheet, {
                 header: 1
             });
-
-        document
-        .getElementById("driversFileName")
-        .innerText = file.name;
     };
 
     reader.readAsArrayBuffer(file);
@@ -351,6 +351,10 @@ document
     let file = e.target.files[0];
 
     if (!file) return;
+
+    document
+    .getElementById("clientsFileName")
+    .innerText = file.name;
 
     let reader = new FileReader();
 
