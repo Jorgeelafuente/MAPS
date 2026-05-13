@@ -1,4 +1,7 @@
-// INICIAR MAPA
+// =============================
+// MAPA
+// =============================
+
 let map = L.map('map').setView([39.5, -0.4], 8);
 
 L.tileLayer(
@@ -8,10 +11,260 @@ L.tileLayer(
     }
 ).addTo(map);
 
-// ARRAY MARCADORES
 let markers = [];
 
-// CONVERTIR COORDENADAS
+// =============================
+// CONDUCTORES
+// =============================
+
+let drivers = JSON.parse(
+    localStorage.getItem("drivers")
+) || [];
+
+let driversData = [];
+
+// =============================
+// MODAL
+// =============================
+
+const driversModal =
+    document.getElementById("driversModal");
+
+document
+.getElementById("driversBtn")
+.addEventListener("click", () => {
+
+    driversModal.classList.remove("hidden");
+
+    renderDrivers();
+});
+
+document
+.getElementById("closeModal")
+.addEventListener("click", () => {
+
+    driversModal.classList.add("hidden");
+});
+
+// =============================
+// SUBIR EXCEL CONDUCTORES
+// =============================
+
+document
+.getElementById("driversFile")
+.addEventListener("change", function(e) {
+
+    let file = e.target.files[0];
+
+    if (!file) return;
+
+    let reader = new FileReader();
+
+    reader.onload = function(event) {
+
+        let data =
+            new Uint8Array(event.target.result);
+
+        let workbook = XLSX.read(data, {
+            type: 'array'
+        });
+
+        let sheetName =
+            workbook.SheetNames[0];
+
+        let sheet =
+            workbook.Sheets[sheetName];
+
+        driversData =
+            XLSX.utils.sheet_to_json(sheet, {
+                header: 1
+            });
+
+        alert("Excel conductores cargado");
+    };
+
+    reader.readAsArrayBuffer(file);
+});
+
+// =============================
+// AÑADIR CONDUCTOR
+// =============================
+
+document
+.getElementById("addDriverBtn")
+.addEventListener("click", () => {
+
+    let input =
+        document.getElementById("driverName");
+
+    let name =
+        input.value.trim().toUpperCase();
+
+    if (!name) return;
+
+    if (drivers.includes(name)) {
+
+        alert("El conductor ya existe");
+
+        return;
+    }
+
+    drivers.push(name);
+
+    drivers.sort();
+
+    localStorage.setItem(
+        "drivers",
+        JSON.stringify(drivers)
+    );
+
+    input.value = "";
+
+    renderDrivers();
+});
+
+// =============================
+// RENDER CONDUCTORES
+// =============================
+
+function renderDrivers() {
+
+    let container =
+        document.getElementById("driversList");
+
+    container.innerHTML = "";
+
+    drivers.forEach(driver => {
+
+        let card =
+            document.createElement("div");
+
+        card.className = "driver-card";
+
+        card.innerHTML = `
+            <div class="driver-name">
+                ${driver}
+            </div>
+
+            <div class="driver-actions">
+
+                <button
+                    class="info-btn"
+                    onclick="showDriverInfo('${driver}')"
+                >
+                    i
+                </button>
+
+                <button
+                    class="add-btn"
+                >
+                    +
+                </button>
+
+                <button
+                    class="delete-btn"
+                    onclick="deleteDriver('${driver}')"
+                >
+                    🗑
+                </button>
+
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+// =============================
+// ELIMINAR CONDUCTOR
+// =============================
+
+function deleteDriver(driver) {
+
+    let confirmDelete =
+        confirm(
+            `¿Eliminar conductor ${driver}?`
+        );
+
+    if (!confirmDelete) return;
+
+    drivers =
+        drivers.filter(d => d !== driver);
+
+    localStorage.setItem(
+        "drivers",
+        JSON.stringify(drivers)
+    );
+
+    renderDrivers();
+}
+
+// =============================
+// INFO CONDUCTOR
+// =============================
+
+function showDriverInfo(driver) {
+
+    if (driversData.length === 0) {
+
+        alert(
+            "Primero sube el Excel conductores"
+        );
+
+        return;
+    }
+
+    let found = null;
+
+    for (let i = 1; i < driversData.length; i++) {
+
+        let row = driversData[i];
+
+        if (!row) continue;
+
+        let name =
+            String(row[0] || "")
+            .trim()
+            .toUpperCase();
+
+        if (name === driver) {
+
+            found = row;
+
+            break;
+        }
+    }
+
+    if (!found) {
+
+        alert(
+            "No se encontró información"
+        );
+
+        return;
+    }
+
+    alert(`
+Nombre: ${found[0] || "-"}
+
+Matrícula: ${found[1] || "-"}
+
+Teléfono: ${found[2] || "-"}
+
+Tipo: ${found[3] || "-"}
+
+Capacidad: ${found[4] || "-"}
+
+Zona: ${found[5] || "-"}
+
+Observaciones: ${found[6] || "-"}
+    `);
+}
+
+// =============================
+// COORDENADAS
+// =============================
+
 function convertCoords(coord) {
 
     coord = String(coord).trim();
@@ -21,12 +274,7 @@ function convertCoords(coord) {
 
     let match = coord.match(regex);
 
-    if (!match) {
-
-        console.log("ERROR coordenadas:", coord);
-
-        return null;
-    }
+    if (!match) return null;
 
     let lat =
         (+match[1]) +
@@ -45,8 +293,12 @@ function convertCoords(coord) {
     return [lat, lng];
 }
 
-// CARGAR EXCEL
-document.getElementById('fileInput')
+// =============================
+// CLIENTES
+// =============================
+
+document
+.getElementById('fileInput')
 .addEventListener('change', function(e) {
 
     let file = e.target.files[0];
@@ -57,50 +309,53 @@ document.getElementById('fileInput')
 
     reader.onload = function(event) {
 
-        let data = new Uint8Array(event.target.result);
+        let data =
+            new Uint8Array(event.target.result);
 
-        let workbook = XLSX.read(data, {
-            type: 'array'
-        });
+        let workbook =
+            XLSX.read(data, {
+                type: 'array'
+            });
 
-        let sheetName = workbook.SheetNames[0];
+        let sheetName =
+            workbook.SheetNames[0];
 
-        let sheet = workbook.Sheets[sheetName];
+        let sheet =
+            workbook.Sheets[sheetName];
 
-        let rows = XLSX.utils.sheet_to_json(sheet, {
-            header: 1
-        });
+        let rows =
+            XLSX.utils.sheet_to_json(sheet, {
+                header: 1
+            });
 
-        // LIMPIAR MAPA
         markers.forEach(marker => {
             map.removeLayer(marker);
         });
 
         markers = [];
 
-        // RECORRER FILAS
         for (let i = 1; i < rows.length; i++) {
 
             let row = rows[i];
 
             if (!row) continue;
 
-            // COLUMNAS
             let cliente = row[0];
             let municipio = row[1];
             let localidad = row[2];
             let coordsRaw = row[3];
 
-            // NUEVAS COLUMNAS
             let congelado =
                 parseInt(row[5]) || 0;
 
             let refrigerado =
                 parseInt(row[6]) || 0;
 
-            if (!cliente || !coordsRaw) continue;
+            if (!cliente || !coordsRaw)
+                continue;
 
-            let coords = convertCoords(coordsRaw);
+            let coords =
+                convertCoords(coordsRaw);
 
             if (!coords) continue;
 
@@ -120,7 +375,10 @@ document.getElementById('fileInput')
     reader.readAsArrayBuffer(file);
 });
 
-// CREAR MARCADOR
+// =============================
+// MARCADORES
+// =============================
+
 function createMarker(
     cliente,
     municipio,
@@ -130,10 +388,11 @@ function createMarker(
     refrigerado
 ) {
 
-    let color = getColor(
-        congelado,
-        refrigerado
-    );
+    let color =
+        getColor(
+            congelado,
+            refrigerado
+        );
 
     let icon = L.divIcon({
         className: 'custom-marker',
@@ -149,11 +408,10 @@ function createMarker(
         `
     });
 
-    let marker = L.marker(coords, {
-        icon
-    }).addTo(map);
-
-    marker.cliente = cliente;
+    let marker =
+        L.marker(coords, {
+            icon
+        }).addTo(map);
 
     marker.congelado = congelado;
 
@@ -180,12 +438,12 @@ function createMarker(
             <br><br>
 
             <b>Congelado:</b>
-            ${congelado} pallets
+            ${congelado}
 
             <br><br>
 
             <b>Refrigerado:</b>
-            ${refrigerado} pallets
+            ${refrigerado}
 
         </div>
     `);
@@ -193,13 +451,15 @@ function createMarker(
     markers.push(marker);
 }
 
+// =============================
 // COLORES
+// =============================
+
 function getColor(
     congelado,
     refrigerado
 ) {
 
-    // MORADO
     if (
         congelado > 0 &&
         refrigerado > 0
@@ -207,26 +467,26 @@ function getColor(
         return "#7b1fa2";
     }
 
-    // ROJO
     if (congelado > 0) {
         return "#e53935";
     }
 
-    // AZUL
     if (refrigerado > 0) {
         return "#1e88e5";
     }
 
-    // GRIS
     return "#9e9e9e";
 }
 
-// ACTUALIZAR PANEL LATERAL
+// =============================
+// SIDEBAR
+// =============================
+
 function updateSidebar() {
 
-    document.getElementById(
-        "totalClientes"
-    ).innerText =
+    document
+    .getElementById("totalClientes")
+    .innerText =
         markers.length + " clientes";
 
     let totalCongelado = 0;
@@ -242,13 +502,13 @@ function updateSidebar() {
             marker.refrigerado;
     });
 
-    document.getElementById(
-        "totalCongelado"
-    ).innerText =
+    document
+    .getElementById("totalCongelado")
+    .innerText =
         totalCongelado + " pallets";
 
-    document.getElementById(
-        "totalRefrigerado"
-    ).innerText =
+    document
+    .getElementById("totalRefrigerado")
+    .innerText =
         totalRefrigerado + " pallets";
 }
