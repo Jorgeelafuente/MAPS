@@ -33,25 +33,44 @@ header h1 {
     gap: 15px;
 }
 
-#driversBtn {
-    background: white;
-    color: #1464c4;
+/* BOTONES SUPERIORES */
+
+#driversBtn,
+.upload-btn {
+    background: #1464c4;
+    color: white;
     border: none;
     padding: 10px 18px;
     border-radius: 10px;
     font-weight: bold;
     cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
-#driversBtn:hover {
-    background: #e9f1ff;
+#driversBtn:hover,
+.upload-btn:hover {
+    background: #0d57ad;
 }
 
-.upload-box {
-    background: white;
-    padding: 8px 15px;
-    border-radius: 10px;
-    color: #333;
+/* INPUT FILE */
+
+input[type="file"] {
+    display: none;
+}
+
+.upload-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#clientsFileName,
+#driversFileName {
+    color: white;
+    font-size: 14px;
     font-weight: bold;
 }
 
@@ -148,12 +167,11 @@ header h1 {
     margin-bottom: 20px;
 }
 
-#driversFileName {
-    margin-top: 10px;
+.drivers-upload #driversFileName {
     color: #1464c4;
-    font-weight: bold;
-    font-size: 14px;
 }
+
+/* AÑADIR */
 
 .add-driver {
     display: flex;
