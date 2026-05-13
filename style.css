@@ -148,6 +148,13 @@ header h1 {
     margin-bottom: 20px;
 }
 
+#driversFileName {
+    margin-top: 10px;
+    color: #1464c4;
+    font-weight: bold;
+    font-size: 14px;
+}
+
 .add-driver {
     display: flex;
     gap: 10px;
@@ -178,14 +185,12 @@ header h1 {
     border-radius: 12px;
     padding: 15px;
     margin-bottom: 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 .driver-name {
     font-weight: bold;
     color: #0b4f9c;
+    font-size: 16px;
 }
 
 .driver-actions {
@@ -214,4 +219,53 @@ header h1 {
 .delete-btn {
     background: #e53935;
     color: white;
+}
+
+/* INFO CONDUCTOR */
+
+.driver-info {
+    margin-top: 12px;
+    background: white;
+    border: 1px solid #dbe7ff;
+    border-radius: 12px;
+    padding: 15px;
+    animation: fadeIn 0.2s ease;
+}
+
+.driver-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.driver-info-item {
+    background: #f7faff;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.driver-info-item span {
+    display: block;
+    color: #1464c4;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 13px;
+}
+
+.driver-info-item p {
+    color: #333;
+    font-size: 14px;
+}
+
+@keyframes fadeIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
