@@ -22,15 +22,28 @@
 
     <div class="top-buttons">
 
+        <!-- BOTÓN CONDUCTORES -->
+
         <button id="driversBtn">
             Conductores
         </button>
 
-        <div class="upload-box">
+        <!-- SUBIR CLIENTES -->
+
+        <div class="upload-wrapper">
+
+            <label
+                for="fileInput"
+                class="upload-btn"
+            >
+                Subir Clientes
+            </label>
 
             <input type="file"
                    id="fileInput"
                    accept=".xlsx">
+
+            <span id="clientsFileName"></span>
 
         </div>
 
@@ -89,11 +102,22 @@
 
         <div class="drivers-upload">
 
-            <input type="file"
-                   id="driversFile"
-                   accept=".xlsx">
+            <div class="upload-wrapper">
 
-            <div id="driversFileName"></div>
+                <label
+                    for="driversFile"
+                    class="upload-btn"
+                >
+                    Subir Conductores
+                </label>
+
+                <input type="file"
+                       id="driversFile"
+                       accept=".xlsx">
+
+                <span id="driversFileName"></span>
+
+            </div>
 
         </div>
 
