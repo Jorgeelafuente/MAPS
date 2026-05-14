@@ -5,7 +5,7 @@
 let map = L.map('map').setView([39.5, -0.4], 8);
 
 L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{y}.png',
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     {
         attribution: 'OpenStreetMap'
     }
@@ -59,8 +59,8 @@ document
     if (!file) return;
 
     document
-    .getElementById("driversFileName")
-    .innerText = file.name;
+    .getElementById("driversCheck")
+    .innerHTML = "✅";
 
     let reader = new FileReader();
 
@@ -353,8 +353,8 @@ document
     if (!file) return;
 
     document
-    .getElementById("clientsFileName")
-    .innerText = file.name;
+    .getElementById("clientsCheck")
+    .innerHTML = "✅";
 
     let reader = new FileReader();
 
