@@ -1,8 +1,8 @@
-// =============================
+// ===============================
 // MAPA
-// =============================
+// ===============================
 
-let map = L.map('map').setView([39.5, -0.4], 8);
+const map = L.map('map').setView([39.5, -0.4], 8);
 
 L.tileLayer(
     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -14,23 +14,38 @@ L.tileLayer(
 let markers = [];
 let clientesData = [];
 
-// =============================
-// CONDUCTORES
-// =============================
+let selectedDriver = null;
+let routeMode = false;
 
-let drivers = JSON.parse(
-    localStorage.getItem("drivers")
-) || [];
+let routeLines = [];
+
+const driverColors = [
+    "#1E88E5",
+    "#43A047",
+    "#E53935",
+    "#8E24AA",
+    "#FB8C00",
+    "#00ACC1",
+    "#3949AB"
+];
+
+// ===============================
+// CONDUCTORES
+// ===============================
+
+let drivers =
+    JSON.parse(localStorage.getItem("drivers"))
+    || [];
 
 let driversData = [];
 
-let routesData = JSON.parse(
-    localStorage.getItem("routesData")
-) || {};
+let routesData =
+    JSON.parse(localStorage.getItem("routesData"))
+    || {};
 
-// =============================
-// MODAL
-// =============================
+// ===============================
+// MODAL CONDUCTORES
+// ===============================
 
 const driversModal =
     document.getElementById("driversModal");
@@ -51,17 +66,17 @@ document
     driversModal.classList.add("hidden");
 });
 
-// =============================
-// SUBIR EXCEL CONDUCTORES
-// =============================
+// ===============================
+// EXCEL CONDUCTORES
+// ===============================
 
 document
 .getElementById("driversFile")
-.addEventListener("change", function(e) {
+.addEventListener("change", function(e){
 
     let file = e.target.files[0];
 
-    if (!file) return;
+    if(!file) return;
 
     document
     .getElementById("driversCheck")
@@ -69,14 +84,15 @@ document
 
     let reader = new FileReader();
 
-    reader.onload = function(event) {
+    reader.onload = function(event){
 
         let data =
             new Uint8Array(event.target.result);
 
-        let workbook = XLSX.read(data, {
-            type: 'array'
-        });
+        let workbook =
+            XLSX.read(data, {
+                type:'array'
+            });
 
         let sheetName =
             workbook.SheetNames[0];
@@ -85,17 +101,17 @@ document
             workbook.Sheets[sheetName];
 
         driversData =
-            XLSX.utils.sheet_to_json(sheet, {
-                header: 1
+            XLSX.utils.sheet_to_json(sheet,{
+                header:1
             });
     };
 
     reader.readAsArrayBuffer(file);
 });
 
-// =============================
+// ===============================
 // AÑADIR CONDUCTOR
-// =============================
+// ===============================
 
 document
 .getElementById("addDriverBtn")
@@ -107,11 +123,9 @@ document
     let name =
         input.value.trim().toUpperCase();
 
-    if (!name) return;
+    if(!name) return;
 
-    if (drivers.includes(name)) {
-        return;
-    }
+    if(drivers.includes(name)) return;
 
     drivers.push(name);
 
@@ -127,56 +141,65 @@ document
     renderDrivers();
 });
 
-// =============================
+// ===============================
 // RENDER CONDUCTORES
-// =============================
+// ===============================
 
-function renderDrivers() {
+function renderDrivers(){
 
     let container =
         document.getElementById("driversList");
 
     container.innerHTML = "";
 
-    drivers.forEach(driver => {
+    drivers.forEach((driver,index) => {
+
+        let route =
+            routesData[driver];
 
         let card =
             document.createElement("div");
 
         card.className = "driver-card";
 
-        let route =
-            routesData[driver];
+        let color =
+            driverColors[index % driverColors.length];
 
         card.innerHTML = `
-            <div style="
-                display:flex;
-                justify-content:space-between;
-                align-items:center;
-            ">
 
-                <div class="driver-name">
-                    ${driver}
+            <div class="driver-top">
+
+                <div class="driver-name-box">
+
+                    <div
+                        class="driver-color"
+                        style="background:${color}"
+                    ></div>
+
+                    <div class="driver-name">
+                        ${driver}
+                    </div>
+
                 </div>
 
                 <div class="driver-actions">
 
                     <button
-                        class="info-btn"
+                        class="driver-btn info-btn"
                         onclick="toggleDriverInfo('${driver}')"
                     >
                         i
                     </button>
 
                     <button
-                        class="add-btn"
-                        onclick="toggleRoute('${driver}')"
+                        class="driver-btn add-btn"
+                        onclick="toggleRouteCreator('${driver}')"
                     >
                         +
                     </button>
 
                     <button
-                        class="delete-btn"
+                        class="driver-btn delete-btn"
                         onclick="deleteDriver('${driver}')"
                     >
                         🗑
@@ -188,47 +211,66 @@ function renderDrivers() {
 
             <div id="info-${driver}"></div>
 
-            <div id="route-${driver}"></div>
+            <div id="routeCreator-${driver}"></div>
 
             ${
                 route
                 ?
                 `
-                <div class="saved-route">
+                <div class="route-card">
 
-                    <div class="saved-route-title">
-                        🚛 ${route.routeName}
-                    </div>
+                    <div class="route-header">
 
-                    ${route.clients.map(client => `
-                        <div class="saved-client">
+                        <div>
 
-                            <span>
-                                ${client.cliente}
-                            </span>
+                            <div class="route-title">
+                                ${route.routeName}
+                            </div>
 
-                            <span>
-                                C:${client.congelado}
-                                |
-                                R:${client.refrigerado}
-                            </span>
+                            <div class="route-total">
+                                ${route.total}
+                                /
+                                ${route.capacity}
+
+                                ${
+                                    route.total > route.capacity
+                                    ?
+                                    `<span class="warning">⚠️</span>`
+                                    :
+                                    ''
+                                }
+
+                            </div>
 
                         </div>
-                    `).join('')}
 
-                    <div class="saved-total">
+                        <button
+                            class="map-select-btn"
+                            onclick="activateRouteMode('${driver}')"
+                        >
+                            🗺
+                        </button>
 
-                        TOTAL:
-                        ${route.total}
-                        /
-                        ${route.capacity}
+                    </div>
+
+                    <div class="route-clients">
 
                         ${
-                            route.total > route.capacity
-                            ?
-                            `<span class="warning">⚠️</span>`
-                            :
-                            ''
+                            route.clients.map(client => `
+                                <div class="mini-client">
+
+                                    <span>
+                                        ${client.cliente}
+                                    </span>
+
+                                    <small>
+                                        C:${client.congelado}
+                                        |
+                                        R:${client.refrigerado}
+                                    </small>
+
+                                </div>
+                            `).join('')
                         }
 
                     </div>
@@ -238,24 +280,300 @@ function renderDrivers() {
                 :
                 ''
             }
+
         `;
 
         container.appendChild(card);
     });
 }
 
-// =============================
-// ELIMINAR CONDUCTOR
-// =============================
+// ===============================
+// CREAR RUTA
+// ===============================
 
-function deleteDriver(driver) {
+function toggleRouteCreator(driver){
+
+    let container =
+        document.getElementById(
+            `routeCreator-${driver}`
+        );
+
+    if(container.innerHTML !== ""){
+
+        container.innerHTML = "";
+
+        return;
+    }
+
+    container.innerHTML = `
+
+        <div class="route-create-box">
+
+            <input
+                type="text"
+                id="routeName-${driver}"
+                placeholder="Nombre ruta"
+                class="route-input"
+            >
+
+            <button
+                class="create-route-btn"
+                onclick="createRoute('${driver}')"
+            >
+                Crear Ruta
+            </button>
+
+        </div>
+
+    `;
+}
+
+// ===============================
+// CREAR RUTA
+// ===============================
+
+function createRoute(driver){
+
+    let input =
+        document.getElementById(
+            `routeName-${driver}`
+        );
+
+    let routeName =
+        input.value.trim();
+
+    if(!routeName){
+
+        alert("Pon nombre ruta");
+
+        return;
+    }
+
+    routesData[driver] = {
+
+        routeName,
+
+        clients:[],
+
+        total:0,
+
+        capacity:
+            getDriverCapacity(driver)
+    };
+
+    localStorage.setItem(
+        "routesData",
+        JSON.stringify(routesData)
+    );
+
+    renderDrivers();
+}
+
+// ===============================
+// ACTIVAR MODO RUTA
+// ===============================
+
+function activateRouteMode(driver){
+
+    selectedDriver = driver;
+
+    routeMode = true;
+
+    alert(
+        `Modo ruta activado para ${driver}.\n\nHaz click en clientes del mapa`
+    );
+}
+
+// ===============================
+// CLICK CLIENTE
+// ===============================
+
+function addClientToRoute(client){
+
+    if(!routeMode) return;
+
+    if(!selectedDriver) return;
+
+    let route =
+        routesData[selectedDriver];
+
+    if(!route) return;
+
+    let exists =
+        route.clients.find(c =>
+            c.cliente === client.cliente
+        );
+
+    if(exists) return;
+
+    route.clients.push(client);
+
+    route.total +=
+        client.congelado +
+        client.refrigerado;
+
+    localStorage.setItem(
+        "routesData",
+        JSON.stringify(routesData)
+    );
+
+    drawRoute(selectedDriver);
+
+    renderDrivers();
+}
+
+// ===============================
+// DIBUJAR RUTA
+// ===============================
+
+function drawRoute(driver){
+
+    routeLines.forEach(line => {
+        map.removeLayer(line);
+    });
+
+    routeLines = [];
+
+    let route =
+        routesData[driver];
+
+    if(!route) return;
+
+    if(route.clients.length < 2) return;
+
+    let coords =
+        route.clients.map(c => c.coords);
+
+    let color =
+        getDriverColor(driver);
+
+    let polyline =
+        L.polyline(coords,{
+            color,
+            weight:5,
+            opacity:0.8
+        }).addTo(map);
+
+    routeLines.push(polyline);
+}
+
+// ===============================
+// COLOR CONDUCTOR
+// ===============================
+
+function getDriverColor(driver){
+
+    let index =
+        drivers.indexOf(driver);
+
+    return driverColors[
+        index % driverColors.length
+    ];
+}
+
+// ===============================
+// INFO CONDUCTOR
+// ===============================
+
+function toggleDriverInfo(driver){
+
+    let container =
+        document.getElementById(`info-${driver}`);
+
+    if(container.innerHTML !== ""){
+
+        container.innerHTML = "";
+
+        return;
+    }
+
+    let found = null;
+
+    for(let i=1;i<driversData.length;i++){
+
+        let row = driversData[i];
+
+        if(!row) continue;
+
+        let name =
+            String(row[0] || "")
+            .trim()
+            .toUpperCase();
+
+        if(name === driver){
+
+            found = row;
+
+            break;
+        }
+    }
+
+    if(!found){
+
+        container.innerHTML = `
+            <div class="driver-info-box">
+                No encontrado
+            </div>
+        `;
+
+        return;
+    }
+
+    container.innerHTML = `
+
+        <div class="driver-info-box">
+
+            <div class="info-grid">
+
+                <div class="info-item">
+                    <span>Matrícula</span>
+                    <p>${found[1] || "-"}</p>
+                </div>
+
+                <div class="info-item">
+                    <span>Teléfono</span>
+                    <p>${found[2] || "-"}</p>
+                </div>
+
+                <div class="info-item">
+                    <span>Tipo</span>
+                    <p>${found[3] || "-"}</p>
+                </div>
+
+                <div class="info-item">
+                    <span>Capacidad</span>
+                    <p>${found[4] || "-"}</p>
+                </div>
+
+                <div class="info-item">
+                    <span>Zona</span>
+                    <p>${found[5] || "-"}</p>
+                </div>
+
+                <div class="info-item">
+                    <span>Observaciones</span>
+                    <p>${found[6] || "-"}</p>
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+}
+
+// ===============================
+// ELIMINAR CONDUCTOR
+// ===============================
+
+function deleteDriver(driver){
 
     let confirmDelete =
         confirm(
-            `¿Eliminar conductor ${driver}?`
+            `¿Eliminar ${driver}?`
         );
 
-    if (!confirmDelete) return;
+    if(!confirmDelete) return;
 
     drivers =
         drivers.filter(d => d !== driver);
@@ -275,228 +593,24 @@ function deleteDriver(driver) {
     renderDrivers();
 }
 
-// =============================
-// INFO CONDUCTOR
-// =============================
-
-function toggleDriverInfo(driver) {
-
-    let container =
-        document.getElementById(`info-${driver}`);
-
-    if (container.innerHTML !== "") {
-
-        container.innerHTML = "";
-
-        return;
-    }
-
-    if (driversData.length === 0) {
-
-        container.innerHTML = `
-            <div class="driver-info">
-                No se ha cargado Excel conductores
-            </div>
-        `;
-
-        return;
-    }
-
-    let found = null;
-
-    for (let i = 1; i < driversData.length; i++) {
-
-        let row = driversData[i];
-
-        if (!row) continue;
-
-        let name =
-            String(row[0] || "")
-            .trim()
-            .toUpperCase();
-
-        if (name === driver) {
-
-            found = row;
-
-            break;
-        }
-    }
-
-    if (!found) {
-
-        container.innerHTML = `
-            <div class="driver-info">
-                No encontrado
-            </div>
-        `;
-
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="driver-info">
-
-            <div class="driver-info-grid">
-
-                <div class="driver-info-item">
-                    <span>Matrícula</span>
-                    <p>${found[1] || "-"}</p>
-                </div>
-
-                <div class="driver-info-item">
-                    <span>Teléfono</span>
-                    <p>${found[2] || "-"}</p>
-                </div>
-
-                <div class="driver-info-item">
-                    <span>Tipo</span>
-                    <p>${found[3] || "-"}</p>
-                </div>
-
-                <div class="driver-info-item">
-                    <span>Capacidad</span>
-                    <p>${found[4] || "-"}</p>
-                </div>
-
-                <div class="driver-info-item">
-                    <span>Zona</span>
-                    <p>${found[5] || "-"}</p>
-                </div>
-
-                <div class="driver-info-item">
-                    <span>Observaciones</span>
-                    <p>${found[6] || "-"}</p>
-                </div>
-
-            </div>
-
-        </div>
-    `;
-}
-
-// =============================
-// RUTAS
-// =============================
-
-function toggleRoute(driver) {
-
-    let container =
-        document.getElementById(`route-${driver}`);
-
-    if (container.innerHTML !== "") {
-
-        container.innerHTML = "";
-
-        return;
-    }
-
-    let capacity =
-        getDriverCapacity(driver);
-
-    let availableClients =
-        getAvailableClients(driver);
-
-    container.innerHTML = `
-        <div class="route-box">
-
-            <input
-                type="text"
-                id="routeName-${driver}"
-                placeholder="Nombre ruta"
-                class="route-input"
-            >
-
-            <div class="clients-selector">
-
-                ${
-                    availableClients.map(client => `
-                        <label class="client-option">
-
-                            <input
-                                type="checkbox"
-                                value="${client.cliente}"
-                                onchange="updateRouteTotals('${driver}')"
-                            >
-
-                            <span>
-                                ${client.cliente}
-                            </span>
-
-                            <small>
-                                C:${client.congelado}
-                                |
-                                R:${client.refrigerado}
-                            </small>
-
-                        </label>
-                    `).join('')
-                }
-
-            </div>
-
-            <div
-                id="totals-${driver}"
-                class="route-totals"
-            >
-                Total: 0 / ${capacity}
-            </div>
-
-            <button
-                class="save-route-btn"
-                onclick="saveRoute('${driver}')"
-            >
-                Guardar Ruta
-            </button>
-
-        </div>
-    `;
-}
-
-// =============================
-// CLIENTES DISPONIBLES
-// =============================
-
-function getAvailableClients(currentDriver) {
-
-    let usedClients = [];
-
-    Object.keys(routesData).forEach(driver => {
-
-        if (driver === currentDriver) return;
-
-        routesData[driver].clients.forEach(client => {
-
-            usedClients.push(client.cliente);
-        });
-    });
-
-    return clientesData.filter(client => {
-
-        return !usedClients.includes(
-            client.cliente
-        );
-    });
-}
-
-// =============================
+// ===============================
 // CAPACIDAD
-// =============================
+// ===============================
 
-function getDriverCapacity(driver) {
+function getDriverCapacity(driver){
 
-    for (let i = 1; i < driversData.length; i++) {
+    for(let i=1;i<driversData.length;i++){
 
         let row = driversData[i];
 
-        if (!row) continue;
+        if(!row) continue;
 
         let name =
             String(row[0] || "")
             .trim()
             .toUpperCase();
 
-        if (name === driver) {
+        if(name === driver){
 
             return parseInt(row[4]) || 0;
         }
@@ -505,159 +619,17 @@ function getDriverCapacity(driver) {
     return 0;
 }
 
-// =============================
-// TOTALES
-// =============================
-
-function updateRouteTotals(driver) {
-
-    let checkboxes =
-        document.querySelectorAll(
-            `#route-${driver} input[type="checkbox"]:checked`
-        );
-
-    let total = 0;
-
-    checkboxes.forEach(box => {
-
-        let client =
-            clientesData.find(c =>
-                c.cliente === box.value
-            );
-
-        total +=
-            client.congelado +
-            client.refrigerado;
-    });
-
-    let capacity =
-        getDriverCapacity(driver);
-
-    let html = `
-        ${total} / ${capacity}
-    `;
-
-    if (total > capacity) {
-
-        html += `
-            <span class="warning">
-                ⚠️
-            </span>
-        `;
-    }
-
-    document
-    .getElementById(`totals-${driver}`)
-    .innerHTML = html;
-}
-
-// =============================
-// GUARDAR RUTA
-// =============================
-
-function saveRoute(driver) {
-
-    let routeName =
-        document
-        .getElementById(
-            `routeName-${driver}`
-        )
-        .value
-        .trim();
-
-    if (!routeName) {
-
-        alert("Pon nombre ruta");
-
-        return;
-    }
-
-    let selected =
-        document.querySelectorAll(
-            `#route-${driver} input[type="checkbox"]:checked`
-        );
-
-    let clients = [];
-
-    let total = 0;
-
-    selected.forEach(box => {
-
-        let client =
-            clientesData.find(c =>
-                c.cliente === box.value
-            );
-
-        clients.push(client);
-
-        total +=
-            client.congelado +
-            client.refrigerado;
-    });
-
-    routesData[driver] = {
-
-        routeName,
-
-        clients,
-
-        total,
-
-        capacity:
-            getDriverCapacity(driver)
-    };
-
-    localStorage.setItem(
-        "routesData",
-        JSON.stringify(routesData)
-    );
-
-    renderDrivers();
-}
-
-// =============================
-// COORDENADAS
-// =============================
-
-function convertCoords(coord) {
-
-    coord = String(coord).trim();
-
-    let regex =
-        /(\d+)°(\d+)'([\d.]+)"([NS])\s*(\d+)°(\d+)'([\d.]+)"([EW])/;
-
-    let match = coord.match(regex);
-
-    if (!match) return null;
-
-    let lat =
-        (+match[1]) +
-        (+match[2] / 60) +
-        (+match[3] / 3600);
-
-    let lng =
-        (+match[5]) +
-        (+match[6] / 60) +
-        (+match[7] / 3600);
-
-    if (match[4] === "S") lat = -lat;
-
-    if (match[8] === "W") lng = -lng;
-
-    return [lat, lng];
-}
-
-// =============================
+// ===============================
 // CLIENTES
-// =============================
+// ===============================
 
 document
-.getElementById('fileInput')
-.addEventListener('change', function(e) {
+.getElementById("fileInput")
+.addEventListener("change", function(e){
 
     let file = e.target.files[0];
 
-    if (!file) return;
+    if(!file) return;
 
     document
     .getElementById("clientsCheck")
@@ -665,14 +637,14 @@ document
 
     let reader = new FileReader();
 
-    reader.onload = function(event) {
+    reader.onload = function(event){
 
         let data =
             new Uint8Array(event.target.result);
 
         let workbook =
-            XLSX.read(data, {
-                type: 'array'
+            XLSX.read(data,{
+                type:'array'
             });
 
         let sheetName =
@@ -682,11 +654,11 @@ document
             workbook.Sheets[sheetName];
 
         let rows =
-            XLSX.utils.sheet_to_json(sheet, {
-                header: 1
+            XLSX.utils.sheet_to_json(sheet,{
+                header:1
             });
 
-        markers.forEach(marker => {
+        markers.forEach(marker=>{
             map.removeLayer(marker);
         });
 
@@ -694,11 +666,11 @@ document
 
         clientesData = [];
 
-        for (let i = 1; i < rows.length; i++) {
+        for(let i=1;i<rows.length;i++){
 
             let row = rows[i];
 
-            if (!row) continue;
+            if(!row) continue;
 
             let cliente = row[0];
             let municipio = row[1];
@@ -711,13 +683,13 @@ document
             let refrigerado =
                 parseInt(row[6]) || 0;
 
-            if (!cliente || !coordsRaw)
+            if(!cliente || !coordsRaw)
                 continue;
 
             let coords =
                 convertCoords(coordsRaw);
 
-            if (!coords) continue;
+            if(!coords) continue;
 
             let clientData = {
 
@@ -740,11 +712,11 @@ document
     reader.readAsArrayBuffer(file);
 });
 
-// =============================
-// MARCADORES
-// =============================
+// ===============================
+// CREAR MARCADOR
+// ===============================
 
-function createMarker(client) {
+function createMarker(client){
 
     let color =
         getColor(
@@ -752,117 +724,148 @@ function createMarker(client) {
             client.refrigerado
         );
 
-    let icon = L.divIcon({
-        className: 'custom-marker',
-        html: `
-            <div style="
-                background:${color};
-                width:18px;
-                height:18px;
-                border-radius:50%;
-                border:2px solid white;
-                box-shadow:0 0 8px rgba(0,0,0,0.4);
-            "></div>
-        `
-    });
-
     let marker =
-        L.marker(client.coords, {
-            icon
+        L.circleMarker(client.coords,{
+
+            radius:10,
+
+            fillColor:color,
+
+            color:"#ffffff",
+
+            weight:2,
+
+            opacity:1,
+
+            fillOpacity:0.9
+
         }).addTo(map);
 
+    marker.on("click", () => {
+
+        addClientToRoute(client);
+
+        marker.openPopup();
+    });
+
     marker.bindPopup(`
-        <div style="min-width:220px">
 
-            <h3 style="
-                color:#1464c4;
-                margin-bottom:10px;
-            ">
+        <div class="popup-card">
+
+            <div class="popup-title">
                 ${client.cliente}
-            </h3>
+            </div>
 
-            <b>Municipio:</b>
-            ${client.municipio}
+            <div class="popup-row">
+                ${client.localidad}
+            </div>
 
-            <br><br>
+            <div class="popup-pallets">
 
-            <b>Localidad:</b>
-            ${client.localidad}
+                <div class="badge frozen">
+                    ❄ ${client.congelado}
+                </div>
 
-            <br><br>
+                <div class="badge cold">
+                    🧊 ${client.refrigerado}
+                </div>
 
-            <b>Congelado:</b>
-            ${client.congelado}
-
-            <br><br>
-
-            <b>Refrigerado:</b>
-            ${client.refrigerado}
+            </div>
 
         </div>
+
     `);
 
     markers.push(marker);
 }
 
-// =============================
+// ===============================
 // COLORES
-// =============================
+// ===============================
 
 function getColor(
     congelado,
     refrigerado
-) {
+){
 
-    if (
+    if(
         congelado > 0 &&
         refrigerado > 0
-    ) {
-        return "#7b1fa2";
+    ){
+        return "#8E24AA";
     }
 
-    if (congelado > 0) {
-        return "#e53935";
+    if(congelado > 0){
+        return "#E53935";
     }
 
-    if (refrigerado > 0) {
-        return "#1e88e5";
+    if(refrigerado > 0){
+        return "#1E88E5";
     }
 
-    return "#9e9e9e";
+    return "#757575";
 }
 
-// =============================
-// SIDEBAR
-// =============================
+// ===============================
+// COORDENADAS
+// ===============================
 
-function updateSidebar() {
+function convertCoords(coord){
+
+    coord = String(coord).trim();
+
+    let regex =
+        /(\d+)°(\d+)'([\d.]+)"([NS])\s*(\d+)°(\d+)'([\d.]+)"([EW])/;
+
+    let match =
+        coord.match(regex);
+
+    if(!match) return null;
+
+    let lat =
+        (+match[1]) +
+        (+match[2]/60) +
+        (+match[3]/3600);
+
+    let lng =
+        (+match[5]) +
+        (+match[6]/60) +
+        (+match[7]/3600);
+
+    if(match[4] === "S") lat = -lat;
+
+    if(match[8] === "W") lng = -lng;
+
+    return [lat,lng];
+}
+
+// ===============================
+// SIDEBAR
+// ===============================
+
+function updateSidebar(){
 
     document
     .getElementById("totalClientes")
     .innerText =
         markers.length + " clientes";
 
-    let totalCongelado = 0;
+    let congelado = 0;
+    let refrigerado = 0;
 
-    let totalRefrigerado = 0;
+    clientesData.forEach(client => {
 
-    markers.forEach(marker => {
-
-        totalCongelado +=
-            marker.congelado || 0;
-
-        totalRefrigerado +=
-            marker.refrigerado || 0;
+        congelado += client.congelado;
+        refrigerado += client.refrigerado;
     });
 
     document
     .getElementById("totalCongelado")
     .innerText =
-        totalCongelado + " pallets";
+        congelado + " pallets";
 
     document
     .getElementById("totalRefrigerado")
     .innerText =
-        totalRefrigerado + " pallets";
+        refrigerado + " pallets";
 }
