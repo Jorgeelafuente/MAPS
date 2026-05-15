@@ -12,6 +12,7 @@ L.tileLayer(
 ).addTo(map);
 
 let markers = [];
+let clientesData = [];
 
 // =============================
 // CONDUCTORES
@@ -22,6 +23,10 @@ let drivers = JSON.parse(
 ) || [];
 
 let driversData = [];
+
+let routesData = JSON.parse(
+    localStorage.getItem("routesData")
+) || {};
 
 // =============================
 // MODAL
@@ -60,7 +65,7 @@ document
 
     document
     .getElementById("driversCheck")
-    .innerHTML = "✅";
+    .innerHTML = "✓";
 
     let reader = new FileReader();
 
@@ -140,6 +145,9 @@ function renderDrivers() {
 
         card.className = "driver-card";
 
+        let route =
+            routesData[driver];
+
         card.innerHTML = `
             <div style="
                 display:flex;
@@ -162,6 +170,7 @@ function renderDrivers() {
 
                     <button
                         class="add-btn"
+                        onclick="toggleRoute('${driver}')"
                     >
                         +
                     </button>
@@ -178,6 +187,57 @@ function renderDrivers() {
             </div>
 
             <div id="info-${driver}"></div>
+
+            <div id="route-${driver}"></div>
+
+            ${
+                route
+                ?
+                `
+                <div class="saved-route">
+
+                    <div class="saved-route-title">
+                        🚛 ${route.routeName}
+                    </div>
+
+                    ${route.clients.map(client => `
+                        <div class="saved-client">
+
+                            <span>
+                                ${client.cliente}
+                            </span>
+
+                            <span>
+                                C:${client.congelado}
+                                |
+                                R:${client.refrigerado}
+                            </span>
+
+                        </div>
+                    `).join('')}
+
+                    <div class="saved-total">
+
+                        TOTAL:
+                        ${route.total}
+                        /
+                        ${route.capacity}
+
+                        ${
+                            route.total > route.capacity
+                            ?
+                            `<span class="warning">⚠️</span>`
+                            :
+                            ''
+                        }
+
+                    </div>
+
+                </div>
+                `
+                :
+                ''
+            }
         `;
 
         container.appendChild(card);
@@ -200,9 +260,16 @@ function deleteDriver(driver) {
     drivers =
         drivers.filter(d => d !== driver);
 
+    delete routesData[driver];
+
     localStorage.setItem(
         "drivers",
         JSON.stringify(drivers)
+    );
+
+    localStorage.setItem(
+        "routesData",
+        JSON.stringify(routesData)
     );
 
     renderDrivers();
@@ -228,7 +295,7 @@ function toggleDriverInfo(driver) {
 
         container.innerHTML = `
             <div class="driver-info">
-                No se ha cargado el Excel conductores
+                No se ha cargado Excel conductores
             </div>
         `;
 
@@ -260,7 +327,7 @@ function toggleDriverInfo(driver) {
 
         container.innerHTML = `
             <div class="driver-info">
-                No se encontró información
+                No encontrado
             </div>
         `;
 
@@ -309,6 +376,246 @@ function toggleDriverInfo(driver) {
 }
 
 // =============================
+// RUTAS
+// =============================
+
+function toggleRoute(driver) {
+
+    let container =
+        document.getElementById(`route-${driver}`);
+
+    if (container.innerHTML !== "") {
+
+        container.innerHTML = "";
+
+        return;
+    }
+
+    let capacity =
+        getDriverCapacity(driver);
+
+    let availableClients =
+        getAvailableClients(driver);
+
+    container.innerHTML = `
+        <div class="route-box">
+
+            <input
+                type="text"
+                id="routeName-${driver}"
+                placeholder="Nombre ruta"
+                class="route-input"
+            >
+
+            <div class="clients-selector">
+
+                ${
+                    availableClients.map(client => `
+                        <label class="client-option">
+
+                            <input
+                                type="checkbox"
+                                value="${client.cliente}"
+                                onchange="updateRouteTotals('${driver}')"
+                            >
+
+                            <span>
+                                ${client.cliente}
+                            </span>
+
+                            <small>
+                                C:${client.congelado}
+                                |
+                                R:${client.refrigerado}
+                            </small>
+
+                        </label>
+                    `).join('')
+                }
+
+            </div>
+
+            <div
+                id="totals-${driver}"
+                class="route-totals"
+            >
+                Total: 0 / ${capacity}
+            </div>
+
+            <button
+                class="save-route-btn"
+                onclick="saveRoute('${driver}')"
+            >
+                Guardar Ruta
+            </button>
+
+        </div>
+    `;
+}
+
+// =============================
+// CLIENTES DISPONIBLES
+// =============================
+
+function getAvailableClients(currentDriver) {
+
+    let usedClients = [];
+
+    Object.keys(routesData).forEach(driver => {
+
+        if (driver === currentDriver) return;
+
+        routesData[driver].clients.forEach(client => {
+
+            usedClients.push(client.cliente);
+        });
+    });
+
+    return clientesData.filter(client => {
+
+        return !usedClients.includes(
+            client.cliente
+        );
+    });
+}
+
+// =============================
+// CAPACIDAD
+// =============================
+
+function getDriverCapacity(driver) {
+
+    for (let i = 1; i < driversData.length; i++) {
+
+        let row = driversData[i];
+
+        if (!row) continue;
+
+        let name =
+            String(row[0] || "")
+            .trim()
+            .toUpperCase();
+
+        if (name === driver) {
+
+            return parseInt(row[4]) || 0;
+        }
+    }
+
+    return 0;
+}
+
+// =============================
+// TOTALES
+// =============================
+
+function updateRouteTotals(driver) {
+
+    let checkboxes =
+        document.querySelectorAll(
+            `#route-${driver} input[type="checkbox"]:checked`
+        );
+
+    let total = 0;
+
+    checkboxes.forEach(box => {
+
+        let client =
+            clientesData.find(c =>
+                c.cliente === box.value
+            );
+
+        total +=
+            client.congelado +
+            client.refrigerado;
+    });
+
+    let capacity =
+        getDriverCapacity(driver);
+
+    let html = `
+        ${total} / ${capacity}
+    `;
+
+    if (total > capacity) {
+
+        html += `
+            <span class="warning">
+                ⚠️
+            </span>
+        `;
+    }
+
+    document
+    .getElementById(`totals-${driver}`)
+    .innerHTML = html;
+}
+
+// =============================
+// GUARDAR RUTA
+// =============================
+
+function saveRoute(driver) {
+
+    let routeName =
+        document
+        .getElementById(
+            `routeName-${driver}`
+        )
+        .value
+        .trim();
+
+    if (!routeName) {
+
+        alert("Pon nombre ruta");
+
+        return;
+    }
+
+    let selected =
+        document.querySelectorAll(
+            `#route-${driver} input[type="checkbox"]:checked`
+        );
+
+    let clients = [];
+
+    let total = 0;
+
+    selected.forEach(box => {
+
+        let client =
+            clientesData.find(c =>
+                c.cliente === box.value
+            );
+
+        clients.push(client);
+
+        total +=
+            client.congelado +
+            client.refrigerado;
+    });
+
+    routesData[driver] = {
+
+        routeName,
+
+        clients,
+
+        total,
+
+        capacity:
+            getDriverCapacity(driver)
+    };
+
+    localStorage.setItem(
+        "routesData",
+        JSON.stringify(routesData)
+    );
+
+    renderDrivers();
+}
+
+// =============================
 // COORDENADAS
 // =============================
 
@@ -354,7 +661,7 @@ document
 
     document
     .getElementById("clientsCheck")
-    .innerHTML = "✅";
+    .innerHTML = "✓";
 
     let reader = new FileReader();
 
@@ -385,6 +692,8 @@ document
 
         markers = [];
 
+        clientesData = [];
+
         for (let i = 1; i < rows.length; i++) {
 
             let row = rows[i];
@@ -410,14 +719,19 @@ document
 
             if (!coords) continue;
 
-            createMarker(
+            let clientData = {
+
                 cliente,
                 municipio,
                 localidad,
-                coords,
                 congelado,
-                refrigerado
-            );
+                refrigerado,
+                coords
+            };
+
+            clientesData.push(clientData);
+
+            createMarker(clientData);
         }
 
         updateSidebar();
@@ -430,19 +744,12 @@ document
 // MARCADORES
 // =============================
 
-function createMarker(
-    cliente,
-    municipio,
-    localidad,
-    coords,
-    congelado,
-    refrigerado
-) {
+function createMarker(client) {
 
     let color =
         getColor(
-            congelado,
-            refrigerado
+            client.congelado,
+            client.refrigerado
         );
 
     let icon = L.divIcon({
@@ -460,13 +767,9 @@ function createMarker(
     });
 
     let marker =
-        L.marker(coords, {
+        L.marker(client.coords, {
             icon
         }).addTo(map);
-
-    marker.congelado = congelado;
-
-    marker.refrigerado = refrigerado;
 
     marker.bindPopup(`
         <div style="min-width:220px">
@@ -475,26 +778,26 @@ function createMarker(
                 color:#1464c4;
                 margin-bottom:10px;
             ">
-                ${cliente}
+                ${client.cliente}
             </h3>
 
             <b>Municipio:</b>
-            ${municipio}
+            ${client.municipio}
 
             <br><br>
 
             <b>Localidad:</b>
-            ${localidad}
+            ${client.localidad}
 
             <br><br>
 
             <b>Congelado:</b>
-            ${congelado}
+            ${client.congelado}
 
             <br><br>
 
             <b>Refrigerado:</b>
-            ${refrigerado}
+            ${client.refrigerado}
 
         </div>
     `);
@@ -547,10 +850,10 @@ function updateSidebar() {
     markers.forEach(marker => {
 
         totalCongelado +=
-            marker.congelado;
+            marker.congelado || 0;
 
         totalRefrigerado +=
-            marker.refrigerado;
+            marker.refrigerado || 0;
     });
 
     document
